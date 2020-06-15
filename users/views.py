@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import DetailView, FormView
+from django.views.generic import DetailView, FormView, UpdateView
 
-from users.forms import ProfileForm, SignupForm
+from users.forms import SignupForm
 
 from django.shortcuts import render, redirect
 from django.urls import reverse, reverse_lazy
@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 
 from django.contrib.auth.models import User
 from posts.models import Post
+from users.models import Profile
 
 
 class UserDetailView(LoginRequiredMixin, DetailView):
@@ -36,36 +37,17 @@ class SignupView(FormView):
         return super().form_valid(form)
 
 
-# Create your views here.
-@login_required
-def update_profile(request):
-    profile = request.user.profile
+class UpdateProfileView(UpdateView):
+    template_name = 'users/update_profile.html'
+    model = Profile
+    fields = ['website', 'biography', 'phone_number', 'picture']
 
-    if request.method == 'POST':
-        form = ProfileForm(request.POST, request.FILES)
-        if form.is_valid():
-            data = form.cleaned_data
+    def get_object(self):
+        return self.request.user.profile
 
-            profile.website = data['website']
-            profile.biography = data['biography']
-            profile.phone_number = data['phone_number']
-            profile.picture = data['picture']
-            profile.save()
-
-            url = reverse('users:detail', kwargs={'username': request.user.username})
-            return redirect(url)
-    else:
-        form = ProfileForm()
-
-    return render(
-        request=request,
-        template_name='users/update_profile.html',
-        context={
-            'profile': profile,
-            'user': request.user,
-            'form': form
-        }
-    )
+    def get_success_url(self):
+        username = self.object.user.username
+        return reverse('users:detail', kwargs={'username': username})
 
 
 def login_view(request):
